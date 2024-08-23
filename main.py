@@ -75,11 +75,17 @@ class VideoLabelingTool(QMainWindow):
         self.confirm_button = QtWidgets.QPushButton("확인", self)
         self.confirm_button.clicked.connect(self.press_confirm)
 
+        # Backward Button
+        self.backward_button = QPushButton("이전", self)
+        self.backward_button.setEnabled(True)
+        self.backward_button.clicked.connect(self.press_backward)
+
         # Layouts
         control_layout = QHBoxLayout()
         control_layout.setContentsMargins(0, 0, 0, 0)
         control_layout.addWidget(self.play_button)
         control_layout.addWidget(self.position_slider)
+        control_layout.addWidget(self.backward_button)
 
         layout = QVBoxLayout()
         layout.addWidget(self.video_widget)
@@ -120,11 +126,11 @@ class VideoLabelingTool(QMainWindow):
         start = row['Start']
         end = row['End']
 
-        self.entry1.setText(str(row['Sentence_1']))
-        self.entry2.setText(str(row['Sentence_2']))
-        self.entry3.setText(str(row['Sentence_3']))
-        self.entry4.setText(str(row['Category']))
-        self.entry5.setText(str(row['Audio']))
+        self.entry1.setText(str(row['Sentence_1'])) if pd.isna(row['Reviewed_Sentence_1']) or str(row['Reviewed_Sentence_1']) == '' else self.entry1.setText(str(row['Reviewed_Sentence_1']))
+        self.entry2.setText(str(row['Sentence_2'])) if pd.isna(row['Reviewed_Sentence_2']) or str(row['Reviewed_Sentence_2']) == '' else self.entry2.setText(str(row['Reviewed_Sentence_2']))
+        self.entry3.setText(str(row['Sentence_3'])) if pd.isna(row['Reviewed_Sentence_3']) or str(row['Reviewed_Sentence_3']) == '' else self.entry3.setText(str(row['Reviewed_Sentence_3']))
+        self.entry4.setText(str(row['Category'])) if pd.isna(row['Reviewed_Category']) or str(row['Reviewed_Category']) == '' else self.entry4.setText(str(row['Reviewed_Category']))
+        self.entry5.setText(str(row['Audio'])) if pd.isna(row['Reviewed_Audio']) or str(row['Reviewed_Audio']) == '' else self.entry5.setText(str(row['Reviewed_Audio']))
 
         self.update_video_info_label()
 
@@ -151,7 +157,31 @@ class VideoLabelingTool(QMainWindow):
             self.confirm_label("Error")
 
     def press_confirm(self):
-        self.confirm_label(status='Confirm')        
+        self.confirm_label(status='Confirm')
+
+    def press_backward(self):
+        row = self.df.iloc[self.current_index]
+        before_labels = [row['Sentence_1'], row['Sentence_2'], row['Sentence_3'], row['Category'], row['Audio']]
+        after_labels = [self.entry1.text(), self.entry2.text(), self.entry3.text(), self.entry4.text(), self.entry5.text()]
+
+        self.df.at[self.current_index, 'Reviewed_Category'] = after_labels[3] if before_labels[3] != after_labels[3] else ''
+        self.df.at[self.current_index, 'Reviewed_Audio'] = after_labels[4] if before_labels[4] != after_labels[4] else ''
+        self.df.at[self.current_index, 'Reviewed_Sentence_1'] = after_labels[0] if before_labels[0] != after_labels[0] else ''
+        self.df.at[self.current_index, 'Reviewed_Sentence_2'] = after_labels[1] if before_labels[1] != after_labels[1] else ''
+        self.df.at[self.current_index, 'Reviewed_Sentence_3'] = after_labels[2] if before_labels[2] != after_labels[2] else ''
+        self.df.to_excel(self.result_file, index=False)
+
+        self.current_index -= 1
+        if self.current_index >= 0:
+            self.temp_index = self.current_index
+            while(pd.isna(self.df.iloc[self.temp_index]['Video ID'])):
+                self.temp_index -= 1
+
+            self.temp_id = self.df.iloc[self.temp_index]['Video ID']
+            self.load_clip(self.current_index)
+        else:
+            QMessageBox.information(self, "알림", "처음 비디오 클립입니다.")
+            self.current_index += 1    
 
     def confirm_label(self, status):
         row = self.df.iloc[self.current_index]
