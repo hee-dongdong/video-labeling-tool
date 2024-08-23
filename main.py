@@ -8,6 +8,7 @@ from PyQt5.QtMultimediaWidgets import QVideoWidget
 from PyQt5.QtCore import QUrl, Qt
 import sys
 import downloader
+import numpy as np
 
 
 class VideoLabelingTool(QMainWindow):
@@ -30,6 +31,7 @@ class VideoLabelingTool(QMainWindow):
             None
 
         self.temp_index = self.current_index
+        print(self.temp_index)
 
         while(pd.isna(self.df.iloc[self.temp_index]['Video ID'])):
             self.temp_index -= 1
@@ -244,6 +246,11 @@ def main():
 
     
     df = pd.read_excel(args.xlsx_from)
+
+    columns_to_add = ['Reviewed_Category', 'Reviewed_Audio', 'Reviewed_Sentence_1', 'Reviewed_Sentence_2', 'Reviewed_Sentence_3', 'Status']
+    for column in columns_to_add:
+        if column not in df.columns:
+            df[column] = np.nan
 
     if (input("비디오를 다운로드하시겠습니까? (y/n): ") == 'y'):
         downloader.process_videos(df, args.save_videos)
